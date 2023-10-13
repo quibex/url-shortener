@@ -28,19 +28,27 @@ func main() {
 		os.Exit(1)
 	}
 
-	id, err := storage.SaveURL("https://google.com", "google")
+	resURL, err := storage.GetURL("google")
+	if err != nil {
+		log.Error("failed to get url", sl.Err(err))
+		os.Exit(1)
+	}
+
+	log.Info("get url", slog.String("url", resURL))
+	resURL, err = storage.GetURL("goog")
+	if err != nil {
+		log.Error("failed to get url", sl.Err(err))
+		os.Exit(1)
+	}
+
+	log.Info("get url", slog.String("url", resURL))
+
+	_, err = storage.SaveURL("https://google.com", "google")
 	if err != nil {
 		log.Error("failed to save url", sl.Err(err))
 		os.Exit(1)
 	}
 
-	log.Info("saved url", slog.Int64("id", id))
-
-	id, err = storage.SaveURL("https://google.com", "google")
-	if err != nil {
-		log.Error("failed to save url", sl.Err(err))
-		os.Exit(1)
-	}
 	_ = storage
 
 }

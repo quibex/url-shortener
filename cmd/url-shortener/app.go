@@ -1,9 +1,14 @@
 package main
 
 import (
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"log/slog"
 	"os"
 	"urlshortener/internal/config"
+	"urlshortener/internal/http-server/handlers/url/save"
+	mwLogger2 "urlshortener/internal/http-server/middleware/logger"
+	"urlshortener/internal/lib/logger/handlers/slogpretty"
 	"urlshortener/internal/lib/logger/sl"
 	"urlshortener/internal/storage/sqlite"
 )
@@ -28,38 +33,22 @@ func main() {
 		os.Exit(1)
 	}
 
-	resURL, err := storage.GetURL("google")
-	if err != nil {
-		log.Error("failed to get url", sl.Err(err))
-		os.Exit(1)
-	}
+	router := chi.NewRouter()
 
-	log.Info("get url", slog.String("url", resURL))
-	resURL, err = storage.GetURL("goog")
-	if err != nil {
-		log.Error("failed to get url", sl.Err(err))
-		os.Exit(1)
-	}
+	router.Use(middleware.RequestID)
+	router.Use(middleware.Logger)
+	router.Use(mwLogger2.New(log))
+	router.Use(middleware.Recoverer)
+	router.Use(middleware.URLFormat)
 
-	log.Info("get url", slog.String("url", resURL))
-
-	_, err = storage.SaveURL("https://google.com", "google")
-	if err != nil {
-		log.Error("failed to save url", sl.Err(err))
-		os.Exit(1)
-	}
-
-	_ = storage
-
+	router.Post("/url", save.New(log, storage))
 }
 
 func setupLogger(env string) *slog.Logger {
 	var log *slog.Logger
 	switch env {
 	case envLocal:
-		log = slog.New(
-			slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
-		)
+		log = setupPrettySlog()
 	case envProd:
 		log = slog.New(
 			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
@@ -71,4 +60,16 @@ func setupLogger(env string) *slog.Logger {
 		)
 	}
 	return log
+}
+
+func setupPrettySlog() *slog.Logger {
+	opts := slogpretty.PrettyHandlerOptions{
+		SlogOpts: &slog.HandlerOptions{
+			Level: slog.LevelDebug,
+		},
+	}
+
+	handler := opts.NewPrettyHandler(os.Stdout)
+
+	return slog.New(handler)
 }

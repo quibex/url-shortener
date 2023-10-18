@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/mattn/go-sqlite3"
 	_ "github.com/mattn/go-sqlite3" // init sqlite driver
@@ -72,6 +73,9 @@ func (s *Storage) GetURL(alias string) (string, error) {
 
 	var res string
 	err = stmt.QueryRow(alias).Scan(&res)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", storage.ErrURLNotFound
+	}
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", op, err)
 	}

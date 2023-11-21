@@ -7,10 +7,10 @@ import (
 	"github.com/go-playground/validator/v10"
 	"log/slog"
 	"net/http"
-	"urlshortener/internal/lib/api/response"
-	"urlshortener/internal/lib/logger/sl"
-	"urlshortener/internal/lib/random"
-	"urlshortener/internal/storage"
+	"url-shortener/internal/lib/api/response"
+	"url-shortener/internal/lib/logger/sl"
+	"url-shortener/internal/lib/random"
+	"url-shortener/internal/storage"
 )
 
 const aliasLen = 8
@@ -25,6 +25,7 @@ type Response struct {
 	Alias string `json:"alias,omitempty"`
 }
 
+//go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=URLSaver
 type URLSaver interface {
 	SaveURL(urlToSave string, alias string) (int64, error)
 }

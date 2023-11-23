@@ -5,8 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mattn/go-sqlite3"
-	_ "github.com/mattn/go-sqlite3" // init sqlite driver
-	"urlshortener/internal/storage"
+	"url-shortener/internal/storage"
 )
 
 type Storage struct {
@@ -81,4 +80,20 @@ func (s *Storage) GetURL(alias string) (string, error) {
 	}
 
 	return res, nil
+}
+
+func (s *Storage) DeleteURL(alias string) error {
+	const op = "storage.sqlite.DeleteURL"
+
+	stmt, err := s.db.Prepare("DELETE FROM url WHERE alias = ?")
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	_, err = stmt.Exec(alias)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	return nil
 }

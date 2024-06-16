@@ -5,12 +5,12 @@ import (
 	"net/url"
 	"path"
 	"testing"
+	"url-shortener/internal/port/http-server/handlers/url/save"
 
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/gavv/httpexpect/v2"
 	"github.com/stretchr/testify/require"
 
-	"url-shortener/internal/http-server/handlers/url/save"
 	"url-shortener/internal/lib/api"
 	"url-shortener/internal/lib/random"
 )

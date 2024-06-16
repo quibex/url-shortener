@@ -1,10 +1,10 @@
 package save
 
 import (
+	"encoding/json"
 	"errors"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
+	"github.com/labstack/echo/v4"
 	"log/slog"
 	"net/http"
 	"url-shortener/internal/lib/api/response"
@@ -21,7 +21,7 @@ type Request struct {
 }
 
 type Response struct {
-	response.Response
+	Error string `json:"error,omitempty"`
 	Alias string `json:"alias,omitempty"`
 }
 
@@ -30,24 +30,22 @@ type URLSaver interface {
 	SaveURL(urlToSave string, alias string) (int64, error)
 }
 
-func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func New(log *slog.Logger, urlSaver URLSaver) echo.HandlerFunc {
+	return func(c echo.Context) error {
 		const op = "handler.url.save.New"
 
 		log = log.With(
 			slog.String("op", op),
-			slog.String("request_id", middleware.GetReqID(r.Context())),
+			slog.String("request_id", c.Request().Header.Get(echo.HeaderXRequestID)),
 		)
 
-		var req Request
-
-		err := render.DecodeJSON(r.Body, &req)
-		if err != nil {
+		req := new(Request)
+		if err := json.NewDecoder(c.Request().Body).Decode(req); err != nil {
 			log.Error("failed to decode request body", sl.Err(err))
 
-			render.JSON(w, r, response.Error("failed to decode request body"))
-
-			return
+			return c.JSON(http.StatusBadRequest, Response{
+				Error: "failed to decode request body",
+			})
 		}
 
 		log.Info("request body decoded", slog.Any("request", req))
@@ -55,11 +53,10 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 		if err := validator.New().Struct(req); err != nil {
 			log.Error("invalid request", sl.Err(err))
 
-			validateErr := err.(validator.ValidationErrors)
+			var validateErr validator.ValidationErrors
+			errors.As(err, &validateErr)
 
-			render.JSON(w, r, response.ValidationError(validateErr))
-
-			return
+			return c.JSON(http.StatusBadRequest, response.ValidationError(validateErr))
 		}
 
 		alias := req.Alias
@@ -69,29 +66,20 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 
 		id, err := urlSaver.SaveURL(req.URL, alias)
 		if errors.Is(err, storage.ErrURLExists) {
-			log.Info("url already exists", slog.String("url", req.URL))
+			log.Info("alias already exists", slog.String("alias", req.URL))
 
-			render.JSON(w, r, response.Error("url already exists"))
-
-			return
+			return c.JSON(http.StatusConflict, Response{Error: "alias already exists"})
 		}
 		if err != nil {
 			log.Error("failed to add url", sl.Err(err))
 
-			render.JSON(w, r, response.Error("failed to add url"))
-
-			return
+			return c.JSON(http.StatusInternalServerError, Response{Error: "internal error"})
 		}
 
 		log.Info("url added", slog.Int64("id", id))
 
-		responseOK(w, r, alias)
+		return c.JSON(http.StatusOK, Response{
+			Alias: alias,
+		})
 	}
-}
-
-func responseOK(w http.ResponseWriter, r *http.Request, alias string) {
-	render.JSON(w, r, Response{
-		Response: response.OK(),
-		Alias:    alias,
-	})
 }

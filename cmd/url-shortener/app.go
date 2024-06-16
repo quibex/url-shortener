@@ -1,18 +1,17 @@
 package main
 
 import (
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"log/slog"
 	"net/http"
 	"os"
 	"url-shortener/internal/config"
-	"url-shortener/internal/http-server/handlers/redirect"
-	del "url-shortener/internal/http-server/handlers/url/delete"
-	"url-shortener/internal/http-server/handlers/url/save"
-	mwLogger2 "url-shortener/internal/http-server/middleware/logger"
 	"url-shortener/internal/lib/logger/handlers/slogpretty"
 	"url-shortener/internal/lib/logger/sl"
+	"url-shortener/internal/port/http-server/handlers/redirect"
+	"url-shortener/internal/port/http-server/handlers/url/save"
+	"url-shortener/internal/port/http-server/middleware/logger"
 	"url-shortener/internal/storage/sqlite"
 )
 
@@ -36,30 +35,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	router := chi.NewRouter()
+	e := echo.New()
 
-	router.Use(middleware.RequestID)
-	router.Use(middleware.Logger)
-	router.Use(mwLogger2.New(log))
-	router.Use(middleware.Recoverer)
-	router.Use(middleware.URLFormat)
+	e.Use(mwLogger.New(log))
+	e.Use(middleware.Recover())
 
-	router.Route("/url", func(r chi.Router) {
-		r.Use(middleware.BasicAuth("url-shortener", map[string]string{
-			cfg.HTTPServer.User: cfg.HTTPServer.Password,
-		}))
+	e.GET("/:alias", redirect.New(log, storage))
 
-		r.Post("/", save.New(log, storage))
-		r.Delete("/{alias}", del.New(log, storage))
-	})
+	urlGroup := e.Group("/url")
 
-	router.Get("/{alias}", redirect.New(log, storage))
+	urlGroup.POST("", save.New(log, storage))
+	//urlGroup.DELETE("/:alias", del.New(log, storage))
 
 	log.Info("starting server", slog.String("address", cfg.Address))
 
 	srv := &http.Server{
 		Addr:         cfg.Address,
-		Handler:      router,
+		Handler:      e,
 		ReadTimeout:  cfg.Timeout,
 		WriteTimeout: cfg.Timeout,
 		IdleTimeout:  cfg.IdleTimeout,
@@ -69,7 +61,7 @@ func main() {
 		log.Error("failed to start server")
 	}
 
-	log.Error("server stopped")
+	log.Info("server stopped")
 }
 
 func setupLogger(env string) *slog.Logger {

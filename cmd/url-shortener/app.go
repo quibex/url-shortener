@@ -1,18 +1,19 @@
 package main
 
 import (
+	"context"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"log/slog"
 	"net/http"
 	"os"
+	urlstoragegrpc "url-shortener/internal/adapter/url-storage/grpc"
 	"url-shortener/internal/config"
 	"url-shortener/internal/lib/logger/handlers/slogpretty"
 	"url-shortener/internal/lib/logger/sl"
 	"url-shortener/internal/port/http-server/handlers/redirect"
 	"url-shortener/internal/port/http-server/handlers/url/save"
 	"url-shortener/internal/port/http-server/middleware/logger"
-	"url-shortener/internal/storage/sqlite"
 )
 
 const (
@@ -29,7 +30,14 @@ func main() {
 	log.Info("starting url-shortener", slog.String("env", cfg.Env))
 	log.Debug("debug mode")
 
-	storage, err := sqlite.New(cfg.StoragePath)
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.URLStorage.Timeout)
+	defer cancel()
+	urlStorage, err := urlstoragegrpc.New(
+		ctx, log,
+		cfg.URLStorage.Address,
+		cfg.URLStorage.Timeout,
+		cfg.URLStorage.Retries,
+	)
 	if err != nil {
 		log.Error("failed to create storage", sl.Err(err))
 		os.Exit(1)
@@ -40,11 +48,11 @@ func main() {
 	e.Use(mwLogger.New(log))
 	e.Use(middleware.Recover())
 
-	e.GET("/:alias", redirect.New(log, storage))
+	e.GET("/:alias", redirect.New(log, urlStorage))
 
 	urlGroup := e.Group("/url")
 
-	urlGroup.POST("", save.New(log, storage))
+	urlGroup.POST("", save.New(log, urlStorage))
 	//urlGroup.DELETE("/:alias", del.New(log, storage))
 
 	log.Info("starting server", slog.String("address", cfg.Address))
@@ -73,7 +81,6 @@ func setupLogger(env string) *slog.Logger {
 		log = slog.New(
 			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
 		)
-
 	case envDev:
 		log = slog.New(
 			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),

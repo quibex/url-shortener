@@ -1,6 +1,7 @@
 package save
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/go-playground/validator/v10"
@@ -27,7 +28,7 @@ type Response struct {
 
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=URLSaver
 type URLSaver interface {
-	SaveURL(urlToSave string, alias string) (int64, error)
+	SaveURL(ctx context.Context, url string, alias string) (int64, error)
 }
 
 func New(log *slog.Logger, urlSaver URLSaver) echo.HandlerFunc {
@@ -64,7 +65,7 @@ func New(log *slog.Logger, urlSaver URLSaver) echo.HandlerFunc {
 			alias = random.NewRandomString(aliasLen)
 		}
 
-		id, err := urlSaver.SaveURL(req.URL, alias)
+		id, err := urlSaver.SaveURL(c.Request().Context(), req.URL, alias)
 		if errors.Is(err, storage.ErrURLExists) {
 			log.Info("alias already exists", slog.String("alias", req.URL))
 

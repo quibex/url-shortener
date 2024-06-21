@@ -1,6 +1,7 @@
 package redirect
 
 import (
+	"context"
 	"errors"
 	"github.com/labstack/echo/v4"
 	"log/slog"
@@ -11,7 +12,7 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=URLGetter
 type URLGetter interface {
-	GetURL(alias string) (string, error)
+	GetURL(ctx context.Context, alias string) (string, error)
 }
 
 func New(log *slog.Logger, urlGetter URLGetter) echo.HandlerFunc {
@@ -29,7 +30,7 @@ func New(log *slog.Logger, urlGetter URLGetter) echo.HandlerFunc {
 		//	log.Info("alias is empty")
 		//	return echo.NewHTTPError(http.StatusBadRequest, "invalid request")
 		//}
-		resURL, err := urlGetter.GetURL(alias)
+		resURL, err := urlGetter.GetURL(c.Request().Context(), alias)
 		if errors.Is(err, storage.ErrURLNotFound) {
 			log.Info("url not found", "alias", alias)
 			return echo.NewHTTPError(http.StatusNotFound, "not found")

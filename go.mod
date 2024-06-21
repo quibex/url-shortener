@@ -6,12 +6,13 @@ require (
 	github.com/brianvoe/gofakeit/v6 v6.24.0
 	github.com/fatih/color v1.15.0
 	github.com/gavv/httpexpect/v2 v2.16.0
-	github.com/go-chi/chi/v5 v5.0.10
 	github.com/go-playground/validator/v10 v10.15.5
+	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.1.0
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/labstack/echo/v4 v4.12.0
-	github.com/mattn/go-sqlite3 v1.14.17
+	github.com/quibex/url-storage-api v0.0.0-20240617101821-c01f7f709f57
 	github.com/stretchr/testify v1.8.4
+	google.golang.org/grpc v1.64.0
 )
 
 require (
@@ -55,6 +56,8 @@ require (
 	golang.org/x/sys v0.19.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240318140521-94a12d6c2237 // indirect
+	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/fsnotify.v1 v1.4.7 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

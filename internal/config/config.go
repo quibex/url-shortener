@@ -11,6 +11,7 @@ type Config struct {
 	Env         string `yaml:"env" env-default:"local"`
 	StoragePath string `yaml:"storage_path" env-default:"./storage"`
 	HTTPServer  `yaml:"http_server"`
+	URLStorage  Client `yaml:"url_storage"`
 }
 
 type HTTPServer struct {
@@ -19,6 +20,12 @@ type HTTPServer struct {
 	IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"60s"`
 	User        string        `yaml:"user" env-required:"true"`
 	Password    string        `yaml:"password" env-required:"true" env:"HTTP_SERVER_PASSWORD"`
+}
+
+type Client struct {
+	Address string        `yaml:"address" env-required:"true"`
+	Timeout time.Duration `yaml:"timeout" env-default:"4s"`
+	Retries int           `yaml:"retries" env-default:"3"`
 }
 
 func MustLoad() *Config {
